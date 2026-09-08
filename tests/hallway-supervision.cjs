@@ -1,0 +1,45 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const load = require('./load-ts.cjs');
+const hallway = load('lib/hallway-supervision.ts');
+const page = fs.readFileSync('app/page.tsx', 'utf8');
+const helpers = page.slice(page.indexOf('function roomOrder'), page.indexOf('export default function Home'));
+const auto = page.slice(page.indexOf('  function autoAssign(alternate = false)'), page.indexOf('\n  useEffect(() => {\n    const modelContext'));
+const session = { id: 's1', date: '2026/9/7(월)', period: '1교시', grade1Subject: '국어', grade2Subject: '수학', grade3Subject: '시험 없음', rooms: '1-1,1-2,1-3,2-1,과학실', singleSupervision: true };
+const groups = hallway.hallwayGroups(session);
+assert.deepEqual(groups.map(group => group.rooms), [['1-1', '1-2'], ['1-3'], ['2-1'], ['과학실']]);
+assert.equal(hallway.roomNeedsAssistant(session, '국어'), false);
+assert.equal(hallway.roomNeedsAssistant({ ...session, singleSupervision: false }, '국어'), true);
+assert.equal(hallway.roomNeedsAssistant({ ...session, singleSupervision: false }, '자습'), false);
+assert.equal(hallway.hallwayGroups({ ...session, singleSupervision: false }).length, 0);
+
+const teachers = [{ id: 'hall', name: '가', subject: '', homeroom: '1-1', role: '강사', allowedDuty: 'none', max: 10, unavailable: '', taughtClasses: '1-1,1-2' }, ...Array.from({ length: 8 }, (_, i) => ({ id: 't' + i, name: '교사' + i, subject: '', homeroom: '', role: '교과교사', max: 10, unavailable: '' }))];
+const context = vm.createContext({ ...load('lib/school-rules.ts'), ...load('lib/setter-rules.ts'), ...hallway, ...load('lib/session-grades.ts'), ...load('lib/exam-date.ts'), examName: '2026 시험', specialRooms: ['과학실'], teachers, sessions: [session], assignments: {}, assignmentVariantRef:{current:0}, sameAssignments:(a,b)=>JSON.stringify(a)===JSON.stringify(b), excludeHomeroom: true, requiredCount: 9, rememberAssignments() {}, setActiveTab() {}, setNotice() {} });
+context.setAssignments = value => { context.assignments = value; };
+vm.runInContext(ts.transpile(helpers + auto, { target: ts.ScriptTarget.ES2022 }), context);
+vm.runInContext('autoAssign()', context);
+assert.equal(Object.keys(context.assignments).length, 9);
+assert.ok(['', undefined].includes(context.assignments['s1::1-1'].assistant));
+assert.equal(groups.every(group => context.assignments[hallway.hallwaySlotKey('s1', group.id)].chief), true);
+assert.equal(Object.values(context.assignments).some(item => item.chief === 'hall'), true);
+assert.equal(context.validateSchedule(teachers, [session], context.assignments, true, 2026).length, 0);
+
+(async () => {
+  const files = load('lib/exam-file.ts');
+  const personal = load('lib/personal-schedule.ts');
+  const excel = load('lib/excel-schedule.ts');
+  const data = { name: '2026 시험', teachers, sessions: [session], assignments: context.assignments, excludeHomeroom: true };
+  assert.equal(files.readExamFile(files.makeExamFile(data)).data.sessions[0].singleSupervision, true);
+  assert.equal(personal.personalSchedule(data, 'hall')[0].duty, '복도감독');
+  const buffer = await excel.createScheduleWorkbookBuffer(teachers, [session], context.assignments);
+  const ExcelJS = require('exceljs');
+  const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(buffer);
+  assert.equal(workbook.getWorksheet('감독 목록').getRow(3).getCell(9).text, '복도감독');
+  assert.ok(workbook.getWorksheet('교사별 집계').getColumn(8).values.includes(1));
+  const imported = await excel.importScheduleWorkbook({ arrayBuffer: async () => buffer });
+  assert.equal(imported.sessions[0].singleSupervision, true);
+  assert.equal(groups.every(group => imported.assignments[hallway.hallwaySlotKey('s1', group.id)].chief), true);
+  console.log('PASS: single-supervision setup, grade-safe room pairing, corridor assignment exceptions, counts, personal schedule, JSON and Excel roundtrip');
+})().catch(error => { console.error(error); process.exitCode = 1; });

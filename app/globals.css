@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --font-sans: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif; --font-display: Georgia, 'Noto Serif KR', serif;
+  --radius-sm: calc(var(--radius) * .65); --radius-md: calc(var(--radius) * .82); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.35); --radius-2xl: calc(var(--radius) * 1.75);
+}
+:root { --background: #f3f7fb; --foreground: #172d44; --card: #ffffff; --card-foreground: #172d44; --primary: #083f77; --primary-foreground: #ffffff; --secondary: #e9f3fb; --secondary-foreground: #083f77; --muted: #edf2f7; --muted-foreground: #566b80; --accent: #dff2fc; --accent-foreground: #075787; --destructive: #c43d3d; --border: #d7e3ee; --input: #bdcfdf; --ring: #0485bc; --radius: .72rem; }
+:root { --popover: #ffffff; --popover-foreground: #172d44; }
+/* Shared, opaque surfaces for upload previews, calendars and confirmation dialogs. */
+[data-slot="dialog-content"], [data-slot="alert-dialog-content"] {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 20px 60px rgb(15 23 42 / 25%);
+}
+[data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"] {
+  background-color: rgb(15 23 42 / 50%);
+}
+* { border-color: var(--border); } html { font-family: var(--font-sans); } body { margin: 0; background: var(--background); color: var(--foreground); } button, input, select { font: inherit; }
+.font-display { font-family: var(--font-display); }
+.field-select { height: 2rem; width: 100%; border-radius: .5rem; border: 1px solid var(--input); background: transparent; padding: 0 .625rem; outline: none; }
+.field-select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent); }
+@media print { .no-print { display: none !important; } body { background: white; } main { padding: 0; } section { break-inside: avoid; box-shadow: none !important; } select { appearance: none; border-color: transparent !important; background: transparent !important; padding-left: 0 !important; } }
+.school-brand { display: flex; flex-direction: column; align-items: center; gap: .25rem; flex-shrink: 0; }
+.school-brand img { width: 48px; height: 49px; object-fit: contain; }
+.school-brand span { color: var(--primary); font-size: .75rem; font-weight: 700; white-space: nowrap; }

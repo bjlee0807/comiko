@@ -1,0 +1,18 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const assert = require('node:assert/strict');
+const context = vm.createContext({});
+vm.runInContext(ts.transpile(fs.readFileSync('lib/exam-date.ts', 'utf8').replace(/export /g, ''), { target: ts.ScriptTarget.ES2022 }), context);
+const { parseExamDate, formatExamDate, examDateKey, examYear } = context;
+assert.equal(examYear('2027학년도 기말고사', 2026), 2027);
+assert.equal(examYear('기말고사', 2026), 2026);
+assert.equal(formatExamDate(parseExamDate('4/27(월)', 2026)), '2026/4/27(월)');
+assert.equal(formatExamDate(parseExamDate('2027-04-27', 2026)), '2027/4/27(화)');
+assert.equal(formatExamDate(parseExamDate('2024.2.29', 2026)), '2024/2/29(목)');
+assert.equal(parseExamDate('2026/2/29', 2026), undefined);
+assert.equal(parseExamDate('4/31', 2026), undefined);
+assert.equal(parseExamDate('미정', 2026), undefined);
+assert.equal(examDateKey('4/27(월)', 2026), examDateKey('2026/4/27(월)', 2026));
+assert.notEqual(examDateKey('2027/4/27', 2026), examDateKey('2026/4/27', 2026));
+console.log('PASS: calendar date conversion, weekday, legacy dates, leap years, distinct years and date normalization');
